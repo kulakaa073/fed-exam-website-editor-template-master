@@ -4,7 +4,7 @@ import { ImagePlaceholder } from "../image-placeholder";
 import { Markdown } from "../markdown";
 import { Row } from "../row";
 import { Stage } from "../stage";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Page,
   type Column as ColumnBlock,
@@ -15,19 +15,15 @@ import { findBlockById } from "../../utils/findBlockById";
 import { findParentRowId } from "../../utils/findParentRowId";
 
 export const Editor: FC = () => {
-  const [content, setContent] = useState<Page>({ rows: [] });
+  const [content, setContent] = useState<Page>(() => {
+    const savedContent = localStorage.getItem("content");
+    return savedContent ? JSON.parse(savedContent) : { rows: [] };
+  });
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem("content", JSON.stringify(content));
   }, [content]);
-
-  useEffect(() => {
-    const savedContent = localStorage.getItem("content");
-    if (savedContent) {
-      setContent(JSON.parse(savedContent));
-    }
-  }, []);
 
   const selectedBlock = selectedBlockId
     ? findBlockById(content, selectedBlockId)
@@ -202,6 +198,22 @@ export const Editor: FC = () => {
     });
   };
 
+  const resetDialogRef = useRef<HTMLDialogElement>(null);
+
+  const handleResetClick = () => {
+    resetDialogRef.current?.showModal();
+  };
+
+  const handleResetConfirm = () => {
+    setContent({ rows: [] });
+    setSelectedBlockId(null);
+    resetDialogRef.current?.close();
+  };
+
+  const handleResetCancel = () => {
+    resetDialogRef.current?.close();
+  };
+
   return (
     <div className="editor">
       <Stage onSelect={() => handleSelectContent()}>
@@ -364,7 +376,27 @@ export const Editor: FC = () => {
             </div>
           </div>
         )}
+        <div className="section">
+          <div className="section-header">Reset</div>
+          <div className="actions">
+            <button className="action" onClick={handleResetClick}>
+              Reset
+            </button>
+          </div>
+        </div>
       </div>
+
+      <dialog ref={resetDialogRef} className="reset-dialog">
+        <p>Are you sure you want to reset? All content will be removed.</p>
+        <div className="dialog-actions">
+          <button type="button" className="action" onClick={handleResetCancel}>
+            Cancel
+          </button>
+          <button type="button" className="action" onClick={handleResetConfirm}>
+            Confirm
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 };
